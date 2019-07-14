@@ -4,11 +4,24 @@ from argparse import ArgumentParser
 from prettytable import PrettyTable
 import srv6_tracert
 import yaml
+import json, netaddr
 import os, sys
 
 def parse_config(filename):    
     with open(filename) as hosts_file:
         return yaml.safe_load(hosts_file)
+
+def parse_sids(filename):
+    with open(filename) as json_file:
+        data = json.load(json_file)
+        sidlist = []
+        for p in data['sids']:
+            if netaddr.valid_ipv6(p['ipv6']) is True:
+                sidlist.append(p['ipv6'])
+            else:
+                print('%s is invalid IPv6 address' %p['ipv6'])
+                sys.exit(1)
+        return sidlist
 
 def print_results(results):
     t = PrettyTable(['TTL', 'ASN', 'ICMP dst', 'SR dst', 'Latency'])
@@ -51,8 +64,11 @@ def main():
     dest_group.add_argument('-f', '--destination_file', action="store",
                             help="File with destination hosts IPv6")
     
-    parser.add_argument('-c', '--count', action="store", default=3,
-                        help="Count of random IPv6 SR hops", required=False, type=int)
+    sids_group = parser.add_mutually_exclusive_group(required=True)
+    sids_group.add_argument('-l', '--list_of_sids', action="store",
+                            help="File with SID LIST")
+    sids_group.add_argument('-c', '--count', action="store", default=3,
+                        help="Count of random IPv6 SR hops", type=int)
     parser.add_argument('-s', '--packetsize', action="store", default=8, 
                         help="ICMP echo packet data size", required=False, type=int)
     parser.add_argument('-t', '--timeout', action="store", default=2,
@@ -62,8 +78,16 @@ def main():
 
 
     args = parser.parse_args()
-    sr_hops = srv6_tracert.generate_hops(args.count)
     
+    if args.list_of_sids is not None:
+        sids_file = args.list_of_sids
+        if not os.path.isfile(sids_file):
+            print("SID LIST file does not exist")
+            sys.exit(1)
+        sr_hops = parse_sids(sids_file)
+    else:
+        sr_hops = srv6_tracert.generate_hops(args.count)
+
     if args.destination_file is not None:
         dest_file = args.destination_file
         if not os.path.isfile(dest_file):
