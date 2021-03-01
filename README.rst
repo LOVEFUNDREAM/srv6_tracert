@@ -20,6 +20,8 @@ Usage
                             File with destination hosts IPv6
       -c COUNT, --count COUNT
                             Count of random IPv6 SR hops
+      -l SIDS_FILE, --list_of_sids SIDS_FILE
+                            Json file with a custom sid list 
       -s PACKETSIZE, --packetsize PACKETSIZE
                             ICMP echo packet data size
       -t TIMEOUT, --timeout TIMEOUT
